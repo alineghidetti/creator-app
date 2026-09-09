@@ -553,16 +553,52 @@ function showToast(msg) {
 }
 
 async function loadEntry(key) {
-  try { const res = await window.storage.get(`content:${key}`, false); return res ? JSON.parse(res.value) : null; }
+  try { const res = await storageGet(`content:${key}`); return res ? JSON.parse(res.value) : null; }
   catch (e) { return null; }
 }
 async function saveEntry(key, entry) {
-  try { const result = await window.storage.set(`content:${key}`, JSON.stringify(entry), false); return !!result; }
+  try { const result = await storageSet(`content:${key}`, JSON.stringify(entry)); return !!result; }
   catch (e) { return false; }
 }
 async function deleteEntry(key) {
-  try { await window.storage.delete(`content:${key}`, false); return true; }
+  try { await storageDelete(`content:${key}`); return true; }
   catch (e) { return false; }
+}
+
+const hasCloudStorage = (typeof window.storage !== 'undefined' && window.storage !== null);
+
+function storageGet(key) {
+  if (hasCloudStorage) return window.storage.get(key, false);
+  try {
+    const v = localStorage.getItem(key);
+    if (v === null) return Promise.reject(new Error('not found'));
+    return Promise.resolve({ key, value: v, shared: false });
+  } catch (e) { return Promise.reject(e); }
+}
+function storageSet(key, value) {
+  if (hasCloudStorage) return window.storage.set(key, value, false);
+  try {
+    localStorage.setItem(key, value);
+    return Promise.resolve({ key, value, shared: false });
+  } catch (e) { return Promise.reject(e); }
+}
+function storageDelete(key) {
+  if (hasCloudStorage) return window.storage.delete(key, false);
+  try {
+    localStorage.removeItem(key);
+    return Promise.resolve({ key, deleted: true, shared: false });
+  } catch (e) { return Promise.reject(e); }
+}
+function storageList(prefix) {
+  if (hasCloudStorage) return window.storage.list(prefix, false);
+  try {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!prefix || k.indexOf(prefix) === 0) keys.push(k);
+    }
+    return Promise.resolve({ keys });
+  } catch (e) { return Promise.reject(e); }
 }
 
 function genId() {
@@ -571,27 +607,28 @@ function genId() {
 
 async function loadCategories() {
   try {
-    const res = await window.storage.get('categories', false);
+    const res = await storageGet('categories');
     categoriesCache = res ? JSON.parse(res.value) : DEFAULT_CATEGORIES.slice();
   } catch (e) {
     categoriesCache = DEFAULT_CATEGORIES.slice();
-    await window.storage.set('categories', JSON.stringify(categoriesCache), false);
+    try { await storageSet('categories', JSON.stringify(categoriesCache)); }
+    catch (e2) { /* storage indisponível, segue só em memória */ }
   }
 }
 
 async function saveCategories() {
-  try { await window.storage.set('categories', JSON.stringify(categoriesCache), false); }
+  try { await storageSet('categories', JSON.stringify(categoriesCache)); }
   catch (e) { showToast('Erro ao salvar pasta'); }
 }
 
 async function loadIdeas() {
   ideasCache = {};
   try {
-    const listRes = await window.storage.list('idea:', false);
+    const listRes = await storageList('idea:');
     const keys = listRes && listRes.keys ? listRes.keys : [];
     const promises = keys.map(async (k) => {
       try {
-        const res = await window.storage.get(k, false);
+        const res = await storageGet(k);
         if (res) {
           const idea = JSON.parse(res.value);
           ideasCache[idea.id] = idea;
@@ -606,13 +643,13 @@ async function loadIdeas() {
 
 async function saveIdea(idea) {
   try {
-    const result = await window.storage.set(`idea:${idea.id}`, JSON.stringify(idea), false);
+    const result = await storageSet(`idea:${idea.id}`, JSON.stringify(idea));
     return !!result;
   } catch (e) { return false; }
 }
 
 async function deleteIdea(id) {
-  try { await window.storage.delete(`idea:${id}`, false); return true; }
+  try { await storageDelete(`idea:${id}`); return true; }
   catch (e) { return false; }
 }
 
@@ -1022,7 +1059,6 @@ document.querySelectorAll('.seg-btn').forEach(btn => {
     document.getElementById('weekSection').style.display = activeTab === 'week' ? 'block' : 'none';
     document.getElementById('monthSection').style.display = activeTab === 'month' ? 'block' : 'none';
     document.getElementById('ideasSection').style.display = activeTab === 'ideas' ? 'block' : 'none';
-    document.querySelector('.calendar-wrap').style.display = activeTab === 'ideas' ? 'none' : 'block';
     if (activeTab === 'week') renderWeek();
     else if (activeTab === 'ideas') { renderFolders(); renderIdeasList(); }
     else renderMonthList();
@@ -1036,9 +1072,9 @@ async function refreshAll() {
 }
 
 (async function init() {
-  await loadMonthData();
-  await loadCategories();
-  await loadIdeas();
+  try { await loadMonthData(); } catch (e) {}
+  try { await loadCategories(); } catch (e) {}
+  try { await loadIdeas(); } catch (e) {}
   renderCalendar();
   renderMonthList();
 })();
