@@ -169,6 +169,75 @@
     display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;
   }
 
+  /* Folders / categories */
+  .folder-row {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 14px;
+    margin-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .folder-row::-webkit-scrollbar { display: none; }
+  .folder-chip {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 14px;
+    border-radius: 20px;
+    background: var(--dark-2);
+    border: 1px solid transparent;
+    color: var(--ink-soft);
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .folder-chip .folder-icon { font-size: 13px; }
+  .folder-chip .folder-count {
+    font-size: 10.5px;
+    font-weight: 700;
+    background: rgba(255,255,255,0.1);
+    padding: 1px 7px;
+    border-radius: 20px;
+  }
+  .folder-chip.active {
+    background: var(--green);
+    color: #0b2911;
+  }
+  .folder-chip.active .folder-count { background: rgba(11,41,17,0.15); }
+  .folder-chip.add-new {
+    background: transparent;
+    border: 1px dashed var(--ink-faint);
+    color: var(--ink-soft);
+  }
+
+  .idea-card {
+    background: var(--dark-2);
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    border-left: 3px solid var(--green);
+  }
+  .idea-card .row1 { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .idea-card .theme { font-size: 14.5px; font-weight: 700; line-height: 1.3; color: var(--ink); }
+  .idea-card .folder-tag {
+    font-size: 10.5px; font-weight: 700; color: var(--ink-soft);
+    background: var(--dark); padding: 3px 9px; border-radius: 20px; white-space: nowrap;
+  }
+  .idea-card .desc {
+    font-size: 12.5px; margin-top: 5px; color: var(--ink-soft); line-height: 1.4;
+    overflow: hidden; text-overflow: ellipsis; display: -webkit-box;
+    -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .idea-card .meta-row { display: flex; gap: 8px; margin-top: 9px; }
+  .idea-card .meta-chip {
+    font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+    background: var(--dark); color: var(--ink-soft);
+  }
+
   .empty-state {
     text-align: center; color: var(--ink-faint); font-size: 13px; padding: 40px 20px;
   }
@@ -291,6 +360,7 @@
   <div class="segmented">
     <button class="seg-btn active" data-tab="month">Mês</button>
     <button class="seg-btn" data-tab="week">Semana</button>
+    <button class="seg-btn" data-tab="ideas">Ideias</button>
   </div>
 
   <div class="calendar-wrap">
@@ -322,6 +392,15 @@
       <span class="count" id="weekCount"></span>
     </div>
     <div id="weekList"></div>
+  </div>
+
+  <div class="section" id="ideasSection" style="display:none;">
+    <div class="section-title">
+      <h2>Banco de ideias</h2>
+      <span class="count" id="ideasCount"></span>
+    </div>
+    <div class="folder-row" id="folderRow"></div>
+    <div id="ideasList"></div>
   </div>
 
   <div class="bottom-nav">
@@ -382,6 +461,69 @@
   </div>
 </div>
 
+<!-- Modal de ideia sem data -->
+<div class="overlay" id="ideaOverlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h3>Ideia de conteúdo</h3>
+      <button class="close-x" id="ideaBtnClose">✕</button>
+    </div>
+    <div class="modal-date">Sem data definida</div>
+
+    <div class="field">
+      <label><span class="icon-tag">📁</span> Pasta / categoria</label>
+      <select id="ideaCategorySelect" style="width:100%; padding:12px 14px; border-radius:13px; border:1px solid var(--line); font-size:14px; font-family:inherit; background: var(--dark); color: var(--ink);"></select>
+    </div>
+
+    <div class="field">
+      <label><span class="icon-tag">💡</span> Tema</label>
+      <input type="text" id="ideaTheme" placeholder="Ex: Dica rápida sobre produtividade">
+    </div>
+
+    <div class="field">
+      <label><span class="icon-tag">🔗</span> Link do vídeo de inspiração</label>
+      <input type="url" id="ideaLink" placeholder="https://instagram.com/reel/...">
+    </div>
+
+    <div class="field">
+      <label><span class="icon-tag">📝</span> Descrição / legenda</label>
+      <textarea id="ideaDesc" placeholder="Escreva a legenda ou ideia do post..."></textarea>
+    </div>
+
+    <div class="field">
+      <label><span class="icon-tag">🗒️</span> Anotações</label>
+      <textarea id="ideaNotes" placeholder="Detalhes, referências, observações..."></textarea>
+    </div>
+
+    <div class="modal-buttons">
+      <button class="btn btn-delete" id="ideaBtnDelete" style="display:none;">Excluir</button>
+      <button class="btn btn-save" id="ideaBtnSave">Salvar ideia</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de nova pasta -->
+<div class="overlay" id="folderOverlay">
+  <div class="modal" style="padding-bottom: 24px;">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h3>Nova pasta</h3>
+      <button class="close-x" id="folderBtnClose">✕</button>
+    </div>
+    <div class="modal-date">Organize suas ideias por categoria</div>
+
+    <div class="field">
+      <label><span class="icon-tag">📁</span> Nome da pasta</label>
+      <input type="text" id="folderNameInput" placeholder="Ex: Bastidores, Dicas, Depoimentos...">
+    </div>
+
+    <div class="modal-buttons">
+      <button class="btn btn-save" id="folderBtnSave">Criar pasta</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const monthNames = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const weekdayShort = ["DOM","SEG","TER","QUA","QUI","SEX","SÁB"];
@@ -393,6 +535,11 @@ let activeKey = null;
 let dataCache = {};
 let selectedDayKey = null;
 let activeTab = 'month';
+let categoriesCache = [];
+let ideasCache = {}; // id -> idea object
+let activeFolder = 'all';
+let activeIdeaId = null;
+const DEFAULT_CATEGORIES = ['Geral'];
 
 function pad(n) { return n.toString().padStart(2, '0'); }
 function keyFor(y, m, d) { return `${y}-${pad(m+1)}-${pad(d)}`; }
@@ -415,6 +562,57 @@ async function saveEntry(key, entry) {
 }
 async function deleteEntry(key) {
   try { await window.storage.delete(`content:${key}`, false); return true; }
+  catch (e) { return false; }
+}
+
+function genId() {
+  return `${Date.now()}${Math.floor(Math.random() * 1000)}`;
+}
+
+async function loadCategories() {
+  try {
+    const res = await window.storage.get('categories', false);
+    categoriesCache = res ? JSON.parse(res.value) : DEFAULT_CATEGORIES.slice();
+  } catch (e) {
+    categoriesCache = DEFAULT_CATEGORIES.slice();
+    await window.storage.set('categories', JSON.stringify(categoriesCache), false);
+  }
+}
+
+async function saveCategories() {
+  try { await window.storage.set('categories', JSON.stringify(categoriesCache), false); }
+  catch (e) { showToast('Erro ao salvar pasta'); }
+}
+
+async function loadIdeas() {
+  ideasCache = {};
+  try {
+    const listRes = await window.storage.list('idea:', false);
+    const keys = listRes && listRes.keys ? listRes.keys : [];
+    const promises = keys.map(async (k) => {
+      try {
+        const res = await window.storage.get(k, false);
+        if (res) {
+          const idea = JSON.parse(res.value);
+          ideasCache[idea.id] = idea;
+        }
+      } catch (e) {}
+    });
+    await Promise.all(promises);
+  } catch (e) {
+    // sem ideias ainda
+  }
+}
+
+async function saveIdea(idea) {
+  try {
+    const result = await window.storage.set(`idea:${idea.id}`, JSON.stringify(idea), false);
+    return !!result;
+  } catch (e) { return false; }
+}
+
+async function deleteIdea(id) {
+  try { await window.storage.delete(`idea:${id}`, false); return true; }
   catch (e) { return false; }
 }
 
@@ -580,6 +778,155 @@ function renderMonthList() {
   });
 }
 
+function renderFolders() {
+  const row = document.getElementById('folderRow');
+  row.innerHTML = '';
+
+  const allChip = document.createElement('div');
+  allChip.className = 'folder-chip' + (activeFolder === 'all' ? ' active' : '');
+  const totalCount = Object.keys(ideasCache).length;
+  allChip.innerHTML = `<span class="folder-icon">🗂️</span> Todas <span class="folder-count">${totalCount}</span>`;
+  allChip.addEventListener('click', () => { activeFolder = 'all'; renderIdeasList(); renderFolders(); });
+  row.appendChild(allChip);
+
+  categoriesCache.forEach(cat => {
+    const count = Object.values(ideasCache).filter(i => i.category === cat).length;
+    const chip = document.createElement('div');
+    chip.className = 'folder-chip' + (activeFolder === cat ? ' active' : '');
+    chip.innerHTML = `<span class="folder-icon">📁</span> ${escapeHtml(cat)} <span class="folder-count">${count}</span>`;
+    chip.addEventListener('click', () => { activeFolder = cat; renderIdeasList(); renderFolders(); });
+    row.appendChild(chip);
+  });
+
+  const addChip = document.createElement('div');
+  addChip.className = 'folder-chip add-new';
+  addChip.innerHTML = `<span class="folder-icon">＋</span> Nova pasta`;
+  addChip.addEventListener('click', openFolderModal);
+  row.appendChild(addChip);
+}
+
+function renderIdeasList() {
+  const listEl = document.getElementById('ideasList');
+  let ideas = Object.values(ideasCache);
+  if (activeFolder !== 'all') ideas = ideas.filter(i => i.category === activeFolder);
+  ideas.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+  document.getElementById('ideasCount').textContent = ideas.length ? `${ideas.length} ideia${ideas.length > 1 ? 's' : ''}` : '';
+
+  if (ideas.length === 0) {
+    listEl.innerHTML = `<div class="empty-state"><div class="icon-circle">💡</div><div class="title">Nenhuma ideia aqui ainda</div>Toque no + para guardar uma ideia sem data definida.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = '';
+  ideas.forEach(idea => {
+    const card = document.createElement('div');
+    card.className = 'idea-card';
+    card.innerHTML = `
+      <div class="row1">
+        <div class="theme">${escapeHtml(idea.theme || '(sem tema)')}</div>
+        <span class="folder-tag">${escapeHtml(idea.category || 'Geral')}</span>
+      </div>
+      ${idea.description ? `<div class="desc">${escapeHtml(idea.description)}</div>` : ''}
+      ${idea.link ? `<div class="meta-row"><span class="meta-chip">🔗 Inspiração</span></div>` : ''}
+    `;
+    card.addEventListener('click', () => openIdeaModal(idea.id));
+    listEl.appendChild(card);
+  });
+}
+
+function populateCategorySelect(selectedValue) {
+  const sel = document.getElementById('ideaCategorySelect');
+  sel.innerHTML = '';
+  categoriesCache.forEach(cat => {
+    const opt = document.createElement('option');
+    opt.value = cat;
+    opt.textContent = cat;
+    if (cat === selectedValue) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function openIdeaModal(id) {
+  activeIdeaId = id || null;
+  const idea = id ? ideasCache[id] : null;
+  populateCategorySelect(idea ? idea.category : (activeFolder !== 'all' ? activeFolder : categoriesCache[0]));
+  document.getElementById('ideaTheme').value = idea ? (idea.theme || '') : '';
+  document.getElementById('ideaLink').value = idea ? (idea.link || '') : '';
+  document.getElementById('ideaDesc').value = idea ? (idea.description || '') : '';
+  document.getElementById('ideaNotes').value = idea ? (idea.notes || '') : '';
+  document.getElementById('ideaBtnDelete').style.display = idea ? 'block' : 'none';
+  document.getElementById('ideaOverlay').classList.add('open');
+}
+
+function closeIdeaModal() {
+  document.getElementById('ideaOverlay').classList.remove('open');
+  activeIdeaId = null;
+}
+
+document.getElementById('ideaBtnClose').addEventListener('click', closeIdeaModal);
+document.getElementById('ideaOverlay').addEventListener('click', (e) => { if (e.target.id === 'ideaOverlay') closeIdeaModal(); });
+
+document.getElementById('ideaBtnSave').addEventListener('click', async () => {
+  const theme = document.getElementById('ideaTheme').value.trim();
+  const link = document.getElementById('ideaLink').value.trim();
+  const description = document.getElementById('ideaDesc').value.trim();
+  const notes = document.getElementById('ideaNotes').value.trim();
+  const category = document.getElementById('ideaCategorySelect').value || 'Geral';
+
+  if (!theme && !description && !notes && !link) { showToast('Preencha ao menos um campo'); return; }
+
+  const idea = {
+    id: activeIdeaId || genId(),
+    theme, link, description, notes, category,
+    createdAt: (activeIdeaId && ideasCache[activeIdeaId]) ? ideasCache[activeIdeaId].createdAt : Date.now()
+  };
+
+  const ok = await saveIdea(idea);
+  if (ok) {
+    ideasCache[idea.id] = idea;
+    showToast('Ideia salva ✓');
+    closeIdeaModal();
+    renderFolders();
+    renderIdeasList();
+  } else { showToast('Erro ao salvar ideia'); }
+});
+
+document.getElementById('ideaBtnDelete').addEventListener('click', async () => {
+  if (!activeIdeaId) return;
+  const ok = await deleteIdea(activeIdeaId);
+  if (ok) {
+    delete ideasCache[activeIdeaId];
+    showToast('Ideia excluída');
+    closeIdeaModal();
+    renderFolders();
+    renderIdeasList();
+  } else { showToast('Erro ao excluir'); }
+});
+
+function openFolderModal() {
+  document.getElementById('folderNameInput').value = '';
+  document.getElementById('folderOverlay').classList.add('open');
+}
+function closeFolderModal() {
+  document.getElementById('folderOverlay').classList.remove('open');
+}
+document.getElementById('folderBtnClose').addEventListener('click', closeFolderModal);
+document.getElementById('folderOverlay').addEventListener('click', (e) => { if (e.target.id === 'folderOverlay') closeFolderModal(); });
+
+document.getElementById('folderBtnSave').addEventListener('click', async () => {
+  const name = document.getElementById('folderNameInput').value.trim();
+  if (!name) { showToast('Digite um nome para a pasta'); return; }
+  if (categoriesCache.includes(name)) { showToast('Essa pasta já existe'); closeFolderModal(); return; }
+  categoriesCache.push(name);
+  await saveCategories();
+  activeFolder = name;
+  showToast('Pasta criada ✓');
+  closeFolderModal();
+  renderFolders();
+  renderIdeasList();
+});
+
 function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
@@ -642,6 +989,10 @@ document.getElementById('btnDelete').addEventListener('click', async () => {
 });
 
 document.getElementById('fabAdd').addEventListener('click', () => {
+  if (activeTab === 'ideas') {
+    openIdeaModal(null);
+    return;
+  }
   const base = selectedDayKey ? parseKey(selectedDayKey) : new Date();
   const key = keyFor(base.getFullYear(), base.getMonth(), base.getDate());
   openModal(key, base.getDate());
@@ -670,7 +1021,10 @@ document.querySelectorAll('.seg-btn').forEach(btn => {
     activeTab = btn.dataset.tab;
     document.getElementById('weekSection').style.display = activeTab === 'week' ? 'block' : 'none';
     document.getElementById('monthSection').style.display = activeTab === 'month' ? 'block' : 'none';
+    document.getElementById('ideasSection').style.display = activeTab === 'ideas' ? 'block' : 'none';
+    document.querySelector('.calendar-wrap').style.display = activeTab === 'ideas' ? 'none' : 'block';
     if (activeTab === 'week') renderWeek();
+    else if (activeTab === 'ideas') { renderFolders(); renderIdeasList(); }
     else renderMonthList();
   });
 });
@@ -683,6 +1037,8 @@ async function refreshAll() {
 
 (async function init() {
   await loadMonthData();
+  await loadCategories();
+  await loadIdeas();
   renderCalendar();
   renderMonthList();
 })();
