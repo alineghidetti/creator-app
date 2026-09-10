@@ -700,11 +700,12 @@ async function deleteIdea(id) {
 }
 
 async function loadMonthData() {
+  dataCache = {};
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
   const promises = [];
   for (let d = 1; d <= daysInMonth; d++) {
     const key = keyFor(currentYear, currentMonth, d);
-    promises.push(loadEntry(key).then(entry => { if (entry) dataCache[key] = entry; else delete dataCache[key]; }));
+    promises.push(loadEntry(key).then(entry => { if (entry) dataCache[key] = entry; }));
   }
   await Promise.all(promises);
 }
@@ -938,6 +939,7 @@ function openIdeaModal(id) {
   document.getElementById('ideaLink').value = idea ? (idea.link || '') : '';
   document.getElementById('ideaDesc').value = idea ? (idea.description || '') : '';
   document.getElementById('ideaNotes').value = idea ? (idea.notes || '') : '';
+  document.getElementById('ideaScheduleDate').value = '';
   document.getElementById('ideaBtnDelete').style.display = idea ? 'block' : 'none';
   document.getElementById('ideaOverlay').classList.add('open');
 }
@@ -985,6 +987,47 @@ document.getElementById('ideaBtnDelete').addEventListener('click', async () => {
     renderFolders();
     renderIdeasList();
   } else { showToast('Erro ao excluir'); }
+});
+
+document.getElementById('ideaBtnSchedule').addEventListener('click', async () => {
+  const dateVal = document.getElementById('ideaScheduleDate').value; // formato YYYY-MM-DD
+  if (!dateVal) { showToast('Escolha uma data primeiro'); return; }
+
+  const theme = document.getElementById('ideaTheme').value.trim();
+  const link = document.getElementById('ideaLink').value.trim();
+  const description = document.getElementById('ideaDesc').value.trim();
+  const notes = document.getElementById('ideaNotes').value.trim();
+
+  if (!theme && !description && !notes && !link) { showToast('Preencha ao menos um campo antes de agendar'); return; }
+
+  const entry = { link, theme, description, notes, done: false };
+  const ok = await saveEntry(dateVal, entry);
+  if (!ok) { showToast('Erro ao agendar'); return; }
+
+  if (activeIdeaId) {
+    await deleteIdea(activeIdeaId);
+    delete ideasCache[activeIdeaId];
+  }
+
+  const d = parseKey(dateVal);
+  currentYear = d.getFullYear();
+  currentMonth = d.getMonth();
+  selectedDayKey = dateVal;
+
+  closeIdeaModal();
+
+  document.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.seg-btn[data-tab="month"]').classList.add('active');
+  activeTab = 'month';
+  document.getElementById('weekSection').style.display = 'none';
+  document.getElementById('ideasSection').style.display = 'none';
+  document.getElementById('monthSection').style.display = 'block';
+
+  await loadMonthData();
+  renderCalendar();
+  renderMonthList();
+
+  showToast(`Agendado para ${d.getDate()}/${d.getMonth() + 1} ✓`);
 });
 
 function openFolderModal() {
